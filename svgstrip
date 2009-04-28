@@ -5,89 +5,97 @@
 import sys
 import xml.dom.minidom
 
+PACKAGE = 'svgstrip'
+VERSION = '0.2'
 
-def log(message):
-	print >> sys.stderr, message
+class SvgStripper:
+	def __init__(self):
+		self.verbose = False
+		self.pretend = False
+		self.inplace = False
+		self.input_filename = None
 
-def print_usage():
-	print >> sys.stderr, """\
+	def main(self, params):
+		run, error = SvgStripper.parse_command_line(self, params)
+		if error:
+			return 1
+		elif run:
+			return SvgStripper.run(self)
+		else:
+			return 0
+
+	def log(self, message):
+		if self.verbose:
+			print >> sys.stderr, message
+
+	def print_version(self):
+		print "%s v%s" % (PACKAGE, VERSION)
+
+	def print_usage(self):
+		print >> sys.stderr, """\
 USAGE
   svgstrip [-v|--verbose] [-p|--pretend] strip [[-i|--in-place] <filename>]
+  svgstrip -h|--help
+  svgstrip -V|--version
 
 EXAMPLES
   svgstrip strip drawing.svg > stripped-drawing.svg
   svgstrip strip --in-place drawing.svg
 """
 
-
-def set(settings, key, value):
-	settings[key] = value
-	return settings
-
-
-def parse_command_line(params, settings):
-	usage, error = (False, False)
-
-	actions = {
-		'--verbose': lambda x: set(x, "verbose", True),
-		'--pretend': lambda x: set(x, "pretend", True),
-		'--in-place': lambda x: set(x, "inplace", True),
-	}
-	actions["-v"] = actions["--verbose"]
-	actions["-p"] = actions["--pretend"]
-	actions["-i"] = actions["--in-place"]
-
-	for v in params:
-		try:
-			settings = actions[v](settings)
-		except KeyError:
-			if settings["filename"] == None:
-				settings["filename"] = v
-			else:
-				# More than one filename given
-				error = True
+	def parse_command_line(self, params):
+		run, error = (True, False)
+		for v in params:
+			if v == '--verbose' or v == '-v':
+				self.verbose = True
+			elif v == '--version' or v == '-V':
+				SvgStripper.print_version(self)
+				run = False
 				break
+			elif v == '--help' or v == '-h':
+				SvgStripper.print_usage(self)
+				run = False
+				break
+			elif v == '--pretend' or v == '-p':
+				self.pretend = True
+			elif v == '--in-place' or v == '-i':
+				self.inplace = True
+			else:
+				if self.input_filename == None:
+					self.input_filename = v
+				else:
+					# More than one filename given
+					error = True
+					break
+		if self.input_filename == None:
+			if self.inplace:
+				# Stdin and in-place don't mix well
+				error = True
+			else:
+				self.input_filename = '/dev/stdin'
+		if error:
+			SvgStripper.print_usage(self)
+		return (run, error)
 
-	if settings["filename"] == None:
-		if settings["inplace"]:
-			# Stdin and in-place don't mix well
-			error = True
-		else:
-			settings["filename"] = '/dev/stdin'
-
-	return (usage, error)
-
-
-def run(settings):
-	dom = xml.dom.minidom.parse(settings["filename"])
-	root_node = dom.getElementsByTagName("svg")[0]
-	for v in ('sodipodi:docname', 'inkscape:export-filename'):
-		if root_node.hasAttribute(v):
-			if not settings["pretend"]:
-				root_node.removeAttribute(v)
-			log("Attribute %s deleted" % v)
-	
-	output_filename = settings["inplace"] \
-		and (settings["pretend"] \
-			and '/dev/null' \
-			or settings["filename"]) \
-		or '/dev/stdout'
-		
-	dom.writexml(open(output_filename, 'w'))
-	return 0
-
+	def run(self):
+		dom = xml.dom.minidom.parse(self.input_filename)
+		root_node = dom.getElementsByTagName("svg")[0]
+		for v in ('sodipodi:docname', 'inkscape:export-filename'):
+			if root_node.hasAttribute(v):
+				if not self.pretend:
+					root_node.removeAttribute(v)
+				SvgStripper.log(self, "Attribute %s deleted" % v)
+		output_filename = self.inplace \
+				and self.input_filename \
+				or '/dev/stdout'
+		if not (self.inplace and self.pretend):
+			output_file = open(output_filename, 'w')
+			dom.writexml(output_file)
+			print >> output_file  # Trailing newline
+			output_file.close()
+		return 0
 
 if __name__ == "__main__":
-	settings = {
-		"verbose":False,
-		"pretend":False,
-		"inplace":False,
-		"filename":None,
-	}
-
-	usage, error = parse_command_line(sys.argv[1:], settings)
-	if usage or error:
-		print_usage()
-		sys.exit(error and 1 or 0)
-	else:
-		sys.exit(run(settings))
+	stripper = SvgStripper()
+	res = stripper.main(sys.argv[1:])
+	sys.exit(res)
