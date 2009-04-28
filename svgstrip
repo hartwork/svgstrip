@@ -89,7 +89,11 @@ EXAMPLES
 		except xml.parsers.expat.ExpatError:
 			SvgStripper.error(self, "File '%s' does not contain valid XML" % self.input_filename)
 			return 1
-		root_node = dom.getElementsByTagName("svg")[0]
+		try:
+			root_node = dom.getElementsByTagName("svg")[0]
+		except IndexError:
+			SvgStripper.error(self, "File '%s' does not contain valid SVG" % self.input_filename)
+			return 1
 		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
 				'inkscape:export-filename'):
 			if root_node.hasAttribute(v):
