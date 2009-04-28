@@ -61,7 +61,7 @@ EXAMPLES
 				break
 			elif v in ('--pretend', '-p'):
 				self.pretend = True
-			elif v in ('--in-place', '-i'):
+			elif v in ('--in-place', '--inplace', '-i'):
 				self.inplace = True
 			else:
 				if self.input_filename == None:
