@@ -39,8 +39,8 @@ USAGE
   svgstrip -V|--version
 
 EXAMPLES
-  svgstrip strip drawing.svg > stripped-drawing.svg
-  svgstrip strip --in-place drawing.svg
+  svgstrip drawing.svg > stripped-drawing.svg
+  svgstrip --in-place drawing.svg
 """
 
 	def parse_command_line(self, params):
