@@ -99,7 +99,7 @@ EXAMPLES
 			if root_node.hasAttribute(v):
 				if not self.pretend:
 					root_node.removeAttribute(v)
-				SvgStripper.log(self, "Attribute %s deleted" % v)
+				SvgStripper.log(self, "Attribute '%s' deleted" % v)
 		output_filename = self.inplace \
 				and self.input_filename \
 				or '/dev/stdout'
