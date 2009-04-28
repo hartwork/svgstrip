@@ -6,7 +6,7 @@ import sys
 import xml.dom.minidom
 
 PACKAGE = 'svgstrip'
-VERSION = '0.2.2'
+VERSION = '0.3'
 
 class SvgStripper:
 	def __init__(self):
