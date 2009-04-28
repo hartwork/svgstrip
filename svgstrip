@@ -80,7 +80,8 @@ EXAMPLES
 	def run(self):
 		dom = xml.dom.minidom.parse(self.input_filename)
 		root_node = dom.getElementsByTagName("svg")[0]
-		for v in ('sodipodi:docname', 'inkscape:export-filename'):
+		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
+				'inkscape:export-filename'):
 			if root_node.hasAttribute(v):
 				if not self.pretend:
 					root_node.removeAttribute(v)
