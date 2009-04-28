@@ -49,19 +49,19 @@ EXAMPLES
 	def parse_command_line(self, params):
 		run, error = (True, False)
 		for v in params:
-			if v == '--verbose' or v == '-v':
+			if v in ('--verbose', '-v'):
 				self.verbose = True
-			elif v == '--version' or v == '-V':
+			elif v in ('--version', '-V'):
 				SvgStripper.print_version(self)
 				run = False
 				break
-			elif v == '--help' or v == '-h':
+			elif v in ('--help', '-h'):
 				SvgStripper.print_usage(self)
 				run = False
 				break
-			elif v == '--pretend' or v == '-p':
+			elif v in ('--pretend', '-p'):
 				self.pretend = True
-			elif v == '--in-place' or v == '-i':
+			elif v in ('--in-place', '-i'):
 				self.inplace = True
 			else:
 				if self.input_filename == None:
