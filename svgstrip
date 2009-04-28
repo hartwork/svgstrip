@@ -104,7 +104,11 @@ EXAMPLES
 				and self.input_filename \
 				or '/dev/stdout'
 		if not (self.inplace and self.pretend):
-			output_file = open(output_filename, 'w')
+			try:
+				output_file = open(output_filename, 'w')
+			except IOError:
+				SvgStripper.error(self, "Could not write to file '%s'" % output_filename)
+				return 1
 			dom.writexml(output_file)
 			print >> output_file  # Trailing newline
 			output_file.close()
