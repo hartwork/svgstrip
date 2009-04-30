@@ -16,11 +16,11 @@ class SvgStripper:
 		self.input_filename = None
 
 	def main(self, params):
-		run, error = SvgStripper.parse_command_line(self, params)
+		run, error = self.parse_command_line(params)
 		if error:
 			return 1
 		elif run:
-			return SvgStripper.run(self)
+			return self.run()
 		else:
 			return 0
 
@@ -31,10 +31,12 @@ class SvgStripper:
 	def error(self, message):
 		print >> sys.stderr, "Error:", message
 
-	def print_version(self):
+	@staticmethod
+	def print_version():
 		print "%s v%s" % (PACKAGE, VERSION)
 
-	def print_usage(self):
+	@staticmethod
+	def print_usage():
 		print >> sys.stderr, """\
 USAGE
   svgstrip [-v|--verbose] [-p|--pretend] strip [[-i|--in-place] <filename>]
@@ -52,11 +54,11 @@ EXAMPLES
 			if v in ('--verbose', '-v'):
 				self.verbose = True
 			elif v in ('--version', '-V'):
-				SvgStripper.print_version(self)
+				SvgStripper.print_version()
 				run = False
 				break
 			elif v in ('--help', '-h'):
-				SvgStripper.print_usage(self)
+				SvgStripper.print_usage()
 				run = False
 				break
 			elif v in ('--pretend', '-p'):
@@ -77,29 +79,29 @@ EXAMPLES
 			else:
 				self.input_filename = '/dev/stdin'
 		if error:
-			SvgStripper.print_usage(self)
+			SvgStripper.print_usage()
 		return (run, error)
 
 	def run(self):
 		try:
 			dom = xml.dom.minidom.parse(self.input_filename)
 		except IOError:
-			SvgStripper.error(self, "Could not read from file '%s'" % self.input_filename)
+			self.error("Could not read from file '%s'" % self.input_filename)
 			return 1
 		except xml.parsers.expat.ExpatError:
-			SvgStripper.error(self, "File '%s' does not contain valid XML" % self.input_filename)
+			self.error("File '%s' does not contain valid XML" % self.input_filename)
 			return 1
 		try:
 			root_node = dom.getElementsByTagName("svg")[0]
 		except IndexError:
-			SvgStripper.error(self, "File '%s' does not contain valid SVG" % self.input_filename)
+			self.error("File '%s' does not contain valid SVG" % self.input_filename)
 			return 1
 		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
 				'inkscape:export-filename'):
 			if root_node.hasAttribute(v):
 				if not self.pretend:
 					root_node.removeAttribute(v)
-				SvgStripper.log(self, "Attribute '%s' deleted" % v)
+				self.log("Attribute '%s' deleted" % v)
 		output_filename = self.inplace \
 				and self.input_filename \
 				or '/dev/stdout'
@@ -107,7 +109,7 @@ EXAMPLES
 			try:
 				output_file = open(output_filename, 'w')
 			except IOError:
-				SvgStripper.error(self, "Could not write to file '%s'" % output_filename)
+				self.error("Could not write to file '%s'" % output_filename)
 				return 1
 			dom.writexml(output_file)
 			print >> output_file  # Trailing newline
