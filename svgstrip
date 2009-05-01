@@ -104,13 +104,13 @@ EXAMPLES
 		if not (self.inplace and self.pretend):
 			try:
 				output_file = open(output_filename, 'w')
+				dom.writexml(output_file)
+				print >> output_file  # Trailing newline
+				output_file.close()
 			except IOError, e:
 				logging.error("Could not write to file '%s': %s" \
 						% (output_filename, e.strerror))
 				return 1
-			dom.writexml(output_file)
-			print >> output_file  # Trailing newline
-			output_file.close()
 		return 0
 
 if __name__ == "__main__":
