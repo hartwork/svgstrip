@@ -4,13 +4,13 @@
 
 import sys
 import xml.dom.minidom
+import logging
 
 PACKAGE = 'svgstrip'
 VERSION = '0.3'
 
 class SvgStripper:
 	def __init__(self):
-		self.verbose = False
 		self.pretend = False
 		self.inplace = False
 		self.input_filename = None
@@ -23,13 +23,6 @@ class SvgStripper:
 			return self.run()
 		else:
 			return 0
-
-	def log(self, message):
-		if self.verbose:
-			print >> sys.stderr, message
-
-	def error(self, message):
-		print >> sys.stderr, "Error:", message
 
 	@staticmethod
 	def print_version():
@@ -49,10 +42,11 @@ EXAMPLES
 """
 
 	def parse_command_line(self, params):
+		loglevel = logging.ERROR
 		run, error = (True, False)
 		for v in params:
 			if v in ('--verbose', '-v'):
-				self.verbose = True
+				loglevel = logging.INFO
 			elif v in ('--version', '-V'):
 				SvgStripper.print_version()
 				run = False
@@ -80,28 +74,29 @@ EXAMPLES
 				self.input_filename = '/dev/stdin'
 		if error:
 			SvgStripper.print_usage()
+		logging.basicConfig(format='%(levelname)s: %(message)s', level=loglevel)
 		return (run, error)
 
 	def run(self):
 		try:
 			dom = xml.dom.minidom.parse(self.input_filename)
 		except IOError:
-			self.error("Could not read from file '%s'" % self.input_filename)
+			logging.error("Could not read from file '%s'" % self.input_filename)
 			return 1
 		except xml.parsers.expat.ExpatError:
-			self.error("File '%s' does not contain valid XML" % self.input_filename)
+			logging.error("File '%s' does not contain valid XML" % self.input_filename)
 			return 1
 		try:
 			root_node = dom.getElementsByTagName("svg")[0]
 		except IndexError:
-			self.error("File '%s' does not contain valid SVG" % self.input_filename)
+			logging.error("File '%s' does not contain valid SVG" % self.input_filename)
 			return 1
 		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
 				'inkscape:export-filename'):
 			if root_node.hasAttribute(v):
 				if not self.pretend:
 					root_node.removeAttribute(v)
-				self.log("Attribute '%s' deleted" % v)
+				logging.info("Attribute '%s' deleted" % v)
 		output_filename = self.inplace \
 				and self.input_filename \
 				or '/dev/stdout'
@@ -109,7 +104,7 @@ EXAMPLES
 			try:
 				output_file = open(output_filename, 'w')
 			except IOError:
-				self.error("Could not write to file '%s'" % output_filename)
+				logging.error("Could not write to file '%s'" % output_filename)
 				return 1
 			dom.writexml(output_file)
 			print >> output_file  # Trailing newline
