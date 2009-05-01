@@ -80,8 +80,9 @@ EXAMPLES
 	def run(self):
 		try:
 			dom = xml.dom.minidom.parse(self.input_filename)
-		except IOError:
-			logging.error("Could not read from file '%s'" % self.input_filename)
+		except IOError, e:
+			logging.error("Could not read from file '%s': %s" \
+					% (self.input_filename, e.strerror))
 			return 1
 		except xml.parsers.expat.ExpatError:
 			logging.error("File '%s' does not contain valid XML" % self.input_filename)
@@ -103,8 +104,9 @@ EXAMPLES
 		if not (self.inplace and self.pretend):
 			try:
 				output_file = open(output_filename, 'w')
-			except IOError:
-				logging.error("Could not write to file '%s'" % output_filename)
+			except IOError, e:
+				logging.error("Could not write to file '%s': %s" \
+						% (output_filename, e.strerror))
 				return 1
 			dom.writexml(output_file)
 			print >> output_file  # Trailing newline
