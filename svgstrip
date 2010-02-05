@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009 Sebastian Pipping <sebastian@pipping.org>
 # Licensed under GPLv3 or later
 
@@ -7,7 +8,7 @@ import xml.dom.minidom
 import logging
 
 PACKAGE = 'svgstrip'
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 
 class SvgStripper:
 	def __init__(self):
@@ -101,10 +102,29 @@ EXAMPLES
 		output_filename = self.inplace \
 				and self.input_filename \
 				or '/dev/stdout'
+
+		# Determine target encoding
+		for i in ('actualEncoding', 'encoding'):
+			try:
+				target_encoding = getattr(dom, i)
+			except AttributeError:
+				continue
+			if target_encoding:
+				break
+		if not target_encoding:
+			target_encoding = 'UTF-8'
+
 		if not (self.inplace and self.pretend):
 			try:
 				output_file = open(output_filename, 'w')
-				dom.writexml(output_file)
+				try:
+					raw_bytes = dom.toxml(encoding=target_encoding)
+					logging.info('Encoding used: %s' % target_encoding)
+				except UnicodeEncodeError:
+					logging.info('Encoding used: ASCII + numeric character references')
+					unicode_string = dom.toxml(encoding='UTF-32').decode('UTF-32')
+					raw_bytes = unicode_string.encode('ascii', 'xmlcharrefreplace')
+				output_file.write(raw_bytes)
 				print >> output_file  # Trailing newline
 				output_file.close()
 			except IOError, e:
