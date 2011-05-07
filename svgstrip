@@ -1,20 +1,25 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009 Sebastian Pipping <sebastian@pipping.org>
+# Copyright (C) 2009-2011 Sebastian Pipping <sebastian@pipping.org>
 # Licensed under GPLv3 or later
 
 import sys
 import xml.dom.minidom
 import logging
+import os
 
 PACKAGE = 'svgstrip'
-VERSION = '0.3.2'
+VERSION = '0.4.0'
+
+STDIN_FILENAME = '/dev/stdin'
+
 
 class SvgStripper:
 	def __init__(self):
 		self.pretend = False
 		self.inplace = False
 		self.input_filename = None
+		self.path_warning_presented = False
 
 	def main(self, params):
 		run, error = self.parse_command_line(params)
@@ -42,8 +47,18 @@ EXAMPLES
   svgstrip --in-place drawing.svg
 """
 
+	def relative_path(self, abs_path):
+		if self.input_filename == STDIN_FILENAME:
+			# No docname available, keep basename only
+			if not self.path_warning_presented:
+				self.path_warning_presented = True
+				logging.warn('No document base available when processing input from stdin. Relative paths may be broken.')
+			return abs_path.split('/')[-1]
+		else:
+			return os.path.relpath(abs_path, os.path.dirname(self.input_filename))
+
 	def parse_command_line(self, params):
-		loglevel = logging.ERROR
+		loglevel = logging.WARNING
 		run, error = (True, False)
 		for v in params:
 			if v in ('--verbose', '-v'):
@@ -72,21 +87,56 @@ EXAMPLES
 				# Stdin and in-place don't mix well
 				error = True
 			else:
-				self.input_filename = '/dev/stdin'
+				self.input_filename = STDIN_FILENAME
 		if error:
 			SvgStripper.print_usage()
 		logging.basicConfig(format='%(levelname)s: %(message)s', level=loglevel)
 		return (run, error)
 
-	def process_tree(self, node):
-		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
+	def process_tree(self, node, name_parts):
+		full_name = '/' + '/'.join(name_parts)
+
+		for v in ('sodipodi:docbase', 'sodipodi:docname', \
 				'inkscape:export-filename'):
 			if not node.hasAttribute(v):
 				continue
 
 			if not self.pretend:
 				node.removeAttribute(v)
-			logging.info("Attribute '%s' deleted" % v)
+			logging.info("Attribute '%s' on node '%s' deleted" % (v, full_name))
+
+		for v in ('sodipodi:absref', 'xlink:href'):
+			if not node.hasAttribute(v):
+				continue
+
+			if len(name_parts) == 1:
+				# Root node, informative only, remove
+				if not self.pretend:
+					node.removeAttribute(v)
+				logging.info("Attribute '%s' on node '%s' deleted" % (v, full_name))
+			else:
+				# Non-root node, integrating other content, make relative
+				before = node.getAttribute(v)
+
+				if before.startswith('file:///'):
+					after = self.relative_path(before[len('file://'):])
+				elif before.startswith('/'):
+					after = self.relative_path(before)
+				else:
+					continue
+
+				if not self.pretend:
+					node.setAttribute(v, after)
+				logging.info("Attribute '%s' on node '%s' rewritten from '%s' to '%s'" % (v, full_name, before, after))
+
+		name_to_count = dict()
+		for child in node.childNodes:
+			if child.nodeType != node.ELEMENT_NODE:
+				continue
+
+			count = name_to_count.get(child.tagName, 1)
+			self.process_tree(child, name_parts + ('%s[%d]' % (child.tagName, count), ))
+			name_to_count[child.tagName] = count + 1
 
 	def run(self):
 		try:
@@ -104,7 +154,7 @@ EXAMPLES
 			logging.error("File '%s' does not contain valid SVG" % self.input_filename)
 			return 1
 
-		self.process_tree(root_node)
+		self.process_tree(root_node, ('svg', ))
 
 		output_filename = self.inplace \
 				and self.input_filename \
