@@ -78,6 +78,16 @@ EXAMPLES
 		logging.basicConfig(format='%(levelname)s: %(message)s', level=loglevel)
 		return (run, error)
 
+	def process_tree(self, node):
+		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
+				'inkscape:export-filename'):
+			if not node.hasAttribute(v):
+				continue
+
+			if not self.pretend:
+				node.removeAttribute(v)
+			logging.info("Attribute '%s' deleted" % v)
+
 	def run(self):
 		try:
 			dom = xml.dom.minidom.parse(self.input_filename)
@@ -93,12 +103,9 @@ EXAMPLES
 		except IndexError:
 			logging.error("File '%s' does not contain valid SVG" % self.input_filename)
 			return 1
-		for v in ('sodipodi:absref', 'sodipodi:docbase', 'sodipodi:docname', \
-				'inkscape:export-filename'):
-			if root_node.hasAttribute(v):
-				if not self.pretend:
-					root_node.removeAttribute(v)
-				logging.info("Attribute '%s' deleted" % v)
+
+		self.process_tree(root_node)
+
 		output_filename = self.inplace \
 				and self.input_filename \
 				or '/dev/stdout'
